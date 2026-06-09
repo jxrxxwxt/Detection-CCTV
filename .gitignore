@@ -1,0 +1,7 @@
+data/
+vdo_outputs/
+models/
+logs/
+__pycache__/
+*.pyc
+*.pkl

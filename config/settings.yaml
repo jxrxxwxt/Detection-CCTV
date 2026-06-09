@@ -1,0 +1,38 @@
+cameras:
+- id: camera_1
+  ignore_regions:
+  - - 2404
+    - 8
+    - 2559
+    - 1454
+  max_retries: 5
+  name: Gate 1 CCTV
+  reconnect_delay: 2.0
+  source: rtsp://admin:Aos-16062551@171.102.132.67:554/stream1
+- id: camera_2
+  ignore_regions: []
+  max_retries: 5
+  name: Gate 2 CCTV (Local File)
+  reconnect_delay: 2.0
+  source: data/20260505_045422000_iOS.MP4
+logic:
+  buffer_size: 30
+  grace_period: 15
+  overlap_threshold: 0.3
+  stops_threshold: 1.0
+visualizer:
+  output_path: vdo_outputs/output_with_log.mp4
+  panel_width: 500
+  save_output: true
+  show_window: true
+yolo:
+  conf: 0.25
+  ignore_regions: []
+  imgsz: 640
+  model_path: models/loaded_unloaded_guard.pt
+
+line_bot:
+  enable_alerts: false
+  channel_access_token: "QGp7ykR+qWiZVZ12LuuPW9aHiyzuXsOXRGe2mKnKZGeGXRrr47qCJnkD11d3rHB2u4fD0LYg/IG3RvHMIjT93NIxnvd+nCV/YzMd7xuktwVVVhmbudAOrORnHb2k3ma4fOn0CAqWuwUBEoXW0fsvnwdB04t89/1O/w1cDnyilFU="
+  target_id: "broadcast"
+

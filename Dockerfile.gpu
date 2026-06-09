@@ -1,0 +1,36 @@
+# Base Image with pre-installed PyTorch (CUDA 12.1)
+FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-runtime
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DETECTOR_HEADLESS=true
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies required by OpenCV
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file first (leveraging Docker layer cache)
+COPY requirements.txt .
+
+# Install dependencies (since torch is pre-installed in the base image, it won't be re-downloaded)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy source code and models
+COPY src/ ./src/
+COPY config/ ./config/
+COPY models/ ./models/
+COPY main.py .
+
+# Create directory structure for logs and video outputs
+RUN mkdir -p logs/alerts vdo_outputs data
+
+# Run main script by default
+CMD ["python", "main.py"]

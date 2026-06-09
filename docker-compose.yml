@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  cctv-detector:
+    container_name: cctv-detector
+    build:
+      context: .
+      # ==========================================
+      # CPU Setup (Default):
+      # ==========================================
+      dockerfile: Dockerfile
+      
+      # ==========================================
+      # GPU Setup:
+      # Uncomment the line below to use NVIDIA GPU
+      # ==========================================
+      # dockerfile: Dockerfile.gpu
+
+    restart: unless-stopped
+    
+    # ==========================================
+    # GPU Runtime:
+    # Uncomment the block below if using NVIDIA GPU
+    # ==========================================
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+    environment:
+      - DETECTOR_HEADLESS=true
+      # You can add custom environment variables if needed
+      # - TZ=Asia/Bangkok
+
+    volumes:
+      # Mount configuration so settings can be edited on the host without rebuilding the image
+      - ./config:/app/config
+      
+      # Mount logs to access CSV report and alert images on the host
+      - ./logs:/app/logs
+      
+      # Mount output folder to retrieve processed video files on the host
+      - ./vdo_outputs:/app/vdo_outputs
+      
+      # Mount data folder if using local video files for input
+      - ./data:/app/data
+
+    # Ensures it doesn't crash if the camera RTSP is temporarily down on startup
+    network_mode: "host"

@@ -1,0 +1,38 @@
+# Python ignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+bin/
+lib/
+include/
+pip-selfcheck.json
+
+# IDEs
+.idea/
+.vscode/
+
+# Local data and outputs
+data/*.mp4
+data/*.MP4
+data/*.avi
+data/*.mkv
+vdo_outputs/
+logs/
+.git/
+.gitignore
+
+# Docker specific
+Dockerfile
+Dockerfile.gpu
+docker-compose.yml
+.dockerignore
+implementation_plan.md
+walkthrough.md
+task.md
