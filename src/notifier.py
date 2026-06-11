@@ -76,19 +76,20 @@ class LINENotifier:
         url = self.upload_to_catbox(file_path)
         return url
 
-    def send_alert(self, message_text, frame=None, box=None):
+    def send_alert(self, message_text, frame=None, box=None, truck_id=None, camera_id=None):
         """
-        ส่งแจ้งเตือนไปที่ LINE บอท
+        ส่งแจ้งเตือนไปที่ LINE บอท และบันทึกรูปภาพเหตุการณ์ลงเครื่อง
         - message_text: ข้อความแจ้งเตือน
         - frame: เฟรมรูปภาพต้นฉบับ (numpy array)
         - box: พิกัดของรถบรรทุกในเฟรม [x1, y1, x2, y2]
+        - truck_id: รหัสของรถบรรทุก (ถ้ามี)
+        - camera_id: รหัสกล้องที่ตรวจพบ (ถ้ามี)
+        คืนค่า: พาธของรูปภาพที่บันทึกไว้ในเครื่อง (ถ้ามี) หรือ None
         """
-        if not self.enable_alerts:
-            return
-
+        file_path = None
         img_url = None
 
-        # 1. จัดการครอปและบันทึกรูปภาพหากมีการส่งเฟรมมา
+        # 1. จัดการวาดและบันทึกรูปภาพลงเครื่องโลคอลเสมอก่อนถ้ามี frame ส่งเข้ามา
         if frame is not None:
             try:
                 h, w = frame.shape[:2]
@@ -109,31 +110,36 @@ class LINENotifier:
                     cv2.putText(annotated_img, label, (x1, max(y1 - 10, 25)), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
 
-                # บันทึกไฟล์ภาพลงเครื่องชั่วคราว
+                # บันทึกไฟล์ภาพลงเครื่อง
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                file_name = f"alert_{timestamp}.jpg"
+                cam_str = f"{camera_id}" if camera_id else "unknown_camera"
+                truck_str = f"truck_{truck_id}" if truck_id is not None else "unknown_truck"
+                file_name = f"alert_{cam_str}_{timestamp}_{truck_str}.jpg"
                 file_path = os.path.join(self.alert_dir, file_name)
                 cv2.imwrite(file_path, annotated_img)
                 print(f"[Notifier] Saved alert image locally to: {file_path}")
 
-                # ถ้าไม่ได้กรอกการตั้งค่า LINE Token หรือใช้ค่า placeholder ให้ข้ามการอัปโหลดและส่ง LINE
-                if not self.is_configured():
-                    print("[Notifier] LINE Bot Token/Target ID is not configured or uses placeholder. Skipping upload and LINE message.")
-                    return
-
-                # 2. อัปโหลดรูปภาพขึ้น Cloud เพื่อเอา Direct URL (โดยพยายามใช้ TmpFiles และ fallback ไปที่ Catbox)
-                img_url = self.upload_image(file_path)
-
             except Exception as e:
                 print(f"[Notifier] Failed to process/save image: {e}")
-                if not self.is_configured():
-                    return
-        else:
-            if not self.is_configured():
-                print("[Notifier] LINE Bot Token/Target ID is not configured or uses placeholder. Skipping alert.")
-                return
 
-        # 3. เตรียมการส่งข้อความไปยัง LINE Messaging API
+        # 2. ตรวจสอบการเปิดใช้งานการแจ้งเตือน Line Alert
+        if not self.enable_alerts:
+            # ถ้าตั้งค่า Line เป็น False ให้ข้ามการส่งไลน์ โดยคืนค่า file_path รูปภาพโลคอลกลับไป
+            return file_path
+
+        # หากเปิดใช้ Line Alert แต่ไม่มีการตั้งค่า Token ให้ข้าม
+        if not self.is_configured():
+            print("[Notifier] LINE Bot Token/Target ID is not configured or uses placeholder. Skipping LINE message.")
+            return file_path
+
+        # 3. อัปโหลดรูปภาพขึ้น Cloud เพื่อเอา Direct URL หากมีรูปภาพเซฟไว้สำเร็จ
+        if file_path and os.path.exists(file_path):
+            try:
+                img_url = self.upload_image(file_path)
+            except Exception as e:
+                print(f"[Notifier] Failed to upload image: {e}")
+
+        # 4. เตรียมการส่งข้อความไปยัง LINE Messaging API
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.token}"
@@ -169,7 +175,7 @@ class LINENotifier:
                 "messages": messages
             }
 
-        # 4. ส่ง HTTP Request ไปยัง LINE API
+        # 5. ส่ง HTTP Request ไปยัง LINE API
         try:
             if is_broadcast:
                 print("[Notifier] Sending BROADCAST message to all followers...")
@@ -183,3 +189,5 @@ class LINENotifier:
                 print(f"[Notifier] LINE notification failed: Status {response.status_code}, Response: {response.text}")
         except Exception as e:
             print(f"[Notifier] Error sending LINE request: {e}")
+
+        return file_path
